@@ -1,7 +1,7 @@
 from controller import Controller
 from sim_objs import Person
 from model import Model
-from definitions import NUM_PEOPLE, TOTAL_PEOPLE
+from definitions import NUM_PEOPLE
 
 
 def main():

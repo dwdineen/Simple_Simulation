@@ -5,15 +5,49 @@ import random, datetime
 import os
 from model import Model
 from .sim_obj import SimObj
-from definitions import RESOURCES_DIR, DEATH_PROBS, CHANCE_OF_DEATH
+from definitions import RESOURCES_DIR, DEATH_PROBS, CHANCE_OF_DEATH, MALE, FEMALE, ETHNICITIES
 from pathlib import Path
 from collections import Iterable
+import sim_objs.person_helpers.action as action
+from sim_objs.person_helpers import Traits, Genes, State
+
 
 
 class Person(SimObj):
-    def __init__(self, name=None, genes=None, age=0):
-        possible_genders = ['Male',"Female"]
-        possible_ethnicities = ["European", "African-American", "African", "Asian", "Latino", "Jewish", "Arab", "Indigenous"] #TODO: make ethnicities more abstract
+
+    # Some class variables. These might be moved to a better home later. Where they are does
+    # not really matter
+    
+    # List of all actions that must be evaluated every day, for every person
+    required_actions = [
+        action.Breed(),
+    ] 
+
+    # List of all optional actions that can be done and picked based on an optional_picking function
+    optional_actions = []
+
+    def __init__(self, name=None, genes=None, traits=None, state=None, age=0):
+
+        self.genes = Genes(genes or {})
+        self.traits = Traits(traits or {}, self.genes)
+        self.state = State({State.NAME: name}, self.genes, self.traits)
+
+
+    # I am making properties to easily access some of the more popular Person
+    # genes/traits/state
+    @property
+    def name(self):
+        return self.state[State.NAME]
+
+    @property
+    def age(self):
+        return (Model.get().time - self.state[State.DOB] / 365)
+
+    @property
+    def gender(self):
+        return self.genes[Genes.GENDER]
+
+    def __init__old(self, name=None, genes=None, age=0):
         
         # Set state of person to one of : 'alive' or 'deceased'.
         self.state = "alive"
@@ -38,12 +72,6 @@ class Person(SimObj):
             gender = random.randint(0,1)
             self.gender = possible_genders[gender]
 
-            # Calculate Reproductive Age
-            if self.gender == "Male":
-                self.reproductive_age = round(random.uniform(13,17), 1)
-            elif self.gender == "Female":
-                self.reproductive_age = round(random.uniform(11,16), 1)
-            
             # Calculate Ethnicity
             ethnicity = random.randint(0,len(possible_ethnicities)-1)
             self.ethnicity = possible_ethnicities[ethnicity]
@@ -73,13 +101,33 @@ class Person(SimObj):
         self.height = round(random.uniform(0.4, 0.6), 1) # Height is in Meters.    
         self.weight = round(random.uniform(2.5, 4.5), 1) # Weight is in Kilograms
 
-    def pickName(self, gender):
+    def update(self):
+        """
+        1. Go through list of all required actions. Any action that is a non-zero affinity is performed
+        
+
+        2. Use self.pick_optional_actions() to get a list of optional actions to perform. Keep executing the
+           actions until done.
+        
+        TODO: Implement scheduled actions
+        """
+
+        # 1. Filter the required actions by affinity > 0
+        reqs = [act for act in Person.required_actions if act.affinity(self) > 0]
+              
+
+        # apply each required action to Person
+        for act in reqs: act.apply(self)
+
+    @staticmethod
+    def pickName(gender):
         """
         Input: gender, one of : 'male' , 'female'
         Output: A random full name  (string)
         Example use:
         pickName('female') will return a female name as string.
         """
+
         def load_names(filename):
             """
             Input: Name of file that contains a single name per line (string)
@@ -92,9 +140,9 @@ class Person(SimObj):
                     namelist.append(line.strip('\n'))
             return namelist
             
-        if gender.lower() == 'male':
+        if gender == MALE:
             firstnames = load_names('male_firstnames.txt')
-        elif gender.lower() == 'female':
+        elif gender == FEMALE:
             firstnames = load_names('female_firstnames.txt')
         else:
             return "NO GENDER"
@@ -144,7 +192,7 @@ class Person(SimObj):
         else:
             return ' '.join((str(round(self.age, 1)),'years')) 
         
-    def update(self):
+    def update_old(self):
         if self.state == "alive":
             self.age = float(self.age)
             self.age += (1/365)
@@ -170,29 +218,13 @@ class Person(SimObj):
             #else:
             #    print(f'{self.name} is {round(self.age, 1)} years old.')
 
-def breed(person1, person2):
-    #print(person1) Debugging
-    #print(person2)
-    new_genes = []
-    testament = list(map(random.choice((lambda x: x, lambda x: x * -1)), [[] if isinstance(i, Iterable) else 1 if i % 2 == 0 else -1 for i in range(len(person1.genes))]))
-    for aj, bj in zip(person1.genes, person2.genes):
-        #if isinstance(aj, Iterable):               Dafuq is this?
-            #new_genes.append(breed(aj, bj))
-            #continue                               Someone please explain this to me...
-        translator = {-1: aj, 1: bj}
-        chosen_succesor = random.choice(testament)
-        testament.pop(testament.index(chosen_succesor))
-        new_genes.append(translator[chosen_succesor])
-    return Person(genes=new_genes)
 
-'''     
-Test1 = Person()
-Test2 = Person()
-Test3 = Person()
 
-Test1.getInfo()
-Test2.getInfo()
-Test3.getInfo()
 
-#Uncomment these lines to test Person Function.
-'''
+
+
+
+
+
+
+

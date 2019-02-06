@@ -14,3 +14,7 @@ DEATH_PROBS = {'male':{'Cardiovascular disease':{'chance':0.0128, 'age_factor':0
 CHANCE_OF_DEATH = 2
 
 NUM_PEOPLE = 10 # Change this variable to however many people you wish to run the simulation with.
+
+MALE = "male"
+FEMALE = "female"
+ETHNICITIES = ["European", "African-American", "African", "Asian", "Latino", "Jewish", "Arab", "Indigenous"] #TODO: make ethnicities more abstract
