@@ -24,7 +24,9 @@ class Person(SimObj):
     ] 
 
     # List of all optional actions that can be done and picked based on an optional_picking function
-    optional_actions = []
+    optional_actions = [
+        action.HitByACar()
+    ]
 
     def __init__(self, name=None, genes=None, traits=None, state=None, age=0):
 
@@ -35,71 +37,23 @@ class Person(SimObj):
 
     # I am making properties to easily access some of the more popular Person
     # genes/traits/state
+    # I do not want to make a property for every property
+
     @property
     def name(self):
         return self.state[State.NAME]
 
     @property
-    def age(self):
+    def days(self):
+        return Model.get().time - self.state[State.DOB]
+
+    @property
+    def years(self):
         return (Model.get().time - self.state[State.DOB] / 365)
 
     @property
     def gender(self):
         return self.genes[Genes.GENDER]
-
-    def __init__old(self, name=None, genes=None, age=0):
-        
-        # Set state of person to one of : 'alive' or 'deceased'.
-        self.state = "alive"
-        self.death_cause = None
-
-        #Initialize age
-        self.age = age
-
-        # If the parameter, "genes" is specified, the information in
-        # the parameter will be translated and assigned to the person class's instances.
-        # Else both the genes and the translated assigned instances will be randomly generated.
-        if genes:
-            self.genes = genes
-            #print(self.genes) Debugging
-            self.gender = genes[0]
-            self.ethnicity = genes[1]
-            self.reproductive_age = genes[2]
-            self.adult_height = genes[3]
-            self.adult_weight = genes[4]
-        else:
-            #Calculate Gender
-            gender = random.randint(0,1)
-            self.gender = possible_genders[gender]
-
-            # Calculate Ethnicity
-            ethnicity = random.randint(0,len(possible_ethnicities)-1)
-            self.ethnicity = possible_ethnicities[ethnicity]
-
-            # Calculate Adult Height
-            if self.gender == "Male":
-                self.adult_height = round(random.uniform(1.6,2.1), 1) # Height is in Meters.
-            elif self.gender == "Female":
-                self.adult_height = round(random.uniform(1.5,1.9), 1) # Height is in Meters.
-
-            # Calculate Adult Weight
-            if self.gender == "Male":
-                self.adult_weight = round(random.uniform(50,110), 1) # Weight is in Kilograms
-            elif self.gender == "Female":
-                self.adult_weight = round(random.uniform(50,100), 1) # Weight is in Kilograms
-
-            self.genes = [self.gender, self.ethnicity, self.reproductive_age, self.adult_height, self.adult_weight]
-
-
-        #Calculate name
-        if name:
-            self.name = name
-        else:
-            self.name = self.pickName(self.gender)
-
-
-        self.height = round(random.uniform(0.4, 0.6), 1) # Height is in Meters.    
-        self.weight = round(random.uniform(2.5, 4.5), 1) # Weight is in Kilograms
 
     def update(self):
         """
@@ -117,7 +71,28 @@ class Person(SimObj):
               
 
         # apply each required action to Person
-        for act in reqs: act.apply(self)
+        for act in reqs: 
+            reqs += (act.apply(self) or [])
+
+
+        # 2. use pick_optional_action to get a list of optional_actions
+        action_list = self.pick_optional_action()
+        for act in action_list:
+            action_list += (act.apply(self) or [])
+
+    def pick_optional_action(self):
+        """
+        For now, just pick a single optional action randomly, weighted by affinity. This function needs to be improved.
+        """
+
+        def norm(li):
+            return [float(i)/sum(li) for i in li]
+
+        return random.choices(
+                population = Person.optional_actions,
+                weights    = norm([act.affinity(self) for act in Person.optional_actions]),
+                k = 1
+        )
 
     @staticmethod
     def pickName(gender):

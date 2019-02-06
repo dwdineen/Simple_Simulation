@@ -1,6 +1,8 @@
 from model import Model
 import random
 from .genes import Genes
+from .state import State
+from .traits import Traits
 
 class Action:
 
@@ -48,7 +50,7 @@ class Breed(Action):
             parent2 = random.choice(Model.get().sim_objs)
 
         if parent1.gender != parent2.gender:
-            if parent1.age >= parent1.genes[Genes.REPRODUCTIVE_AGE] and parent2.age >= parent2.genes[Genes.REPRODUCTIVE_AGE]:
+            if parent1.years >= parent1.genes[Genes.REPRODUCTIVE_AGE] and parent2.years >= parent2.genes[Genes.REPRODUCTIVE_AGE]:
                 if random.randint(0, 100) <= 2:
                     Model.get().sim_objs.append(Breed.breed(parent1, parent2))
                     print(f"{parent1.name} and {parent2.name} gave birth to a baby {Model.get().sim_objs[-1].gender} named {Model.get().sim_objs[-1].name}.")
@@ -73,4 +75,21 @@ class Breed(Action):
             new_genes.append(translator[chosen_succesor])
         return Person(genes=Genes.convert_from_list(new_genes))
 
+
+class HitByACar(Action):
+
+    def affinity(self, person):
+        # TODO Analyze the persons traits and determine how likely they are
+        # to be hit by a car
+        return 1
+
+    def apply(self, person):
+        """ Low chance to kill the person """
+
+        if random.randint(0, 100) <= 2:
+            print(f"{person.name} is hit by a car and killed.")
+            person.state[State.ALIVE] = False
+
+
+        
 
